@@ -1,0 +1,248 @@
+import dash
+import dash_core_components as dcc
+import dash_html_components as html
+from dash.dependencies import Input, Output
+import pandas as pd
+import plotly.graph_objects as go
+
+# Load the dataset from Excel file
+df = pd.read_excel(r'C:\\Users\\Abraha\\Desktop\\Incident Anlalysis Dashboard Enhanced Version\\cleaned_month_shortened.xlsx')
+
+# Remove rows where 'Short_Location', 'Month', or 'Short_Category' are null
+df = df.dropna(subset=['Short_Location', 'Month', 'Short_Category'])
+
+# Ensure the 'Month' column is in datetime format for proper sorting
+df['Month'] = pd.to_datetime(df['Month'], format='%b %y')
+sorted_months = sorted(df['Month'].unique())
+
+# Convert back to the string format for display in the dropdown
+df['Month'] = df['Month'].dt.strftime('%b %y')
+
+# Initialize the Dash app
+app = dash.Dash(__name__)
+
+# Create a mapping for labels without the "Short" prefix
+label_mapping = {
+    'Short_Assignment Group': 'Assignment Group',
+    'Short_Category': 'Category',
+    'Short_Service': 'Service',
+    'Short_Issue': 'Issue',
+    'Short_Location': 'Location'
+}
+
+# Define the layout with distinguished header design and light grey background
+app.layout = html.Div([
+    # Header Container
+    html.Div([
+        html.H1(
+            'Incidents Analysis Dashboard',
+            style={
+                'textAlign': 'center',
+                'fontFamily': 'Arial, sans-serif',
+                'fontSize': '40px',
+                'fontWeight': 'bold',
+                'color': '#FFFFFF',
+                'margin': '20px 0',
+                'textShadow': '2px 2px 4px rgba(0, 0, 0, 0.2)'
+            }
+        ),
+        
+        # Dropdown Filters Container
+        html.Div([
+            html.Div([
+                html.Label(label_mapping['Short_Assignment Group'], style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='assignment_group_dropdown',
+                    options=[{'label': i, 'value': i} for i in ['All'] + df['Short_Assignment Group'].unique().tolist()],
+                    multi=True,
+                    placeholder="Select Assignment Group",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+            html.Div([
+                html.Label(label_mapping['Short_Category'], style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='category_dropdown',
+                    options=[{'label': i, 'value': i} for i in ['All'] + df['Short_Category'].unique().tolist()],
+                    multi=True,
+                    placeholder="Select Category",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+            html.Div([
+                html.Label(label_mapping['Short_Service'], style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='service_dropdown',
+                    options=[{'label': i, 'value': i} for i in ['All'] + df['Short_Service'].unique().tolist()],
+                    multi=True,
+                    placeholder="Select Service",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+            html.Div([
+                html.Label(label_mapping['Short_Issue'], style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='issue_dropdown',
+                    options=[{'label': i, 'value': i} for i in ['All'] + df['Short_Issue'].unique().tolist()],
+                    multi=True,
+                    placeholder="Select Issue",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+            html.Div([
+                html.Label(label_mapping['Short_Location'], style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='location_dropdown',
+                    options=[{'label': i, 'value': i} for i in ['All'] + df['Short_Location'].unique().tolist()],
+                    multi=True,
+                    placeholder="Select Location",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+
+            html.Div([
+                html.Label('Month', style={'color': '#FFFFFF', 'fontWeight': 'bold'}),
+                dcc.Dropdown(
+                    id='month_dropdown',
+                    options=[{'label': i.strftime('%b %y'), 'value': i.strftime('%b %y')} for i in sorted_months],
+                    multi=True,
+                    placeholder="Select Month",
+                    value=[],
+                    style={'backgroundColor': '#FFFFFF', 'borderRadius': '5px'}
+                ),
+            ], style={'width': '16%', 'padding': '10px', 'display': 'inline-block', 'verticalAlign': 'top'}),
+        ], style={
+            'display': 'flex',
+            'flexWrap': 'nowrap',
+            'justifyContent': 'space-between',
+            'padding': '0 20px 20px 20px',
+            'width': '100%',
+            'boxSizing': 'border-box'
+        })
+    ], style={
+        'backgroundColor': '#2E3B4E',
+        'boxShadow': '0 4px 15px rgba(0, 0, 0, 0.2)',
+        'borderRadius': '10px',
+        'margin': '20px',
+        'position': 'sticky',
+        'top': '0',
+        'zIndex': '1000'
+    }),
+
+    # Heatmaps Section
+    html.Div([
+        html.Div([dcc.Loading(children=[dcc.Graph(id='heatmap', className='fade-in')])], style={'marginBottom': '30px', 'borderBottom': '2px solid #ddd'}),
+        html.Div([dcc.Loading(children=[dcc.Graph(id='heatmap_service_vs_month', className='fade-in')])], style={'marginBottom': '30px', 'borderBottom': '2px solid #ddd'}),
+        html.Div([dcc.Loading(children=[dcc.Graph(id='heatmap_service_vs_location', className='fade-in')])], style={'marginBottom': '30px', 'borderBottom': '2px solid #ddd'}),
+        html.Div([dcc.Loading(children=[dcc.Graph(id='heatmap_location_vs_month', className='fade-in')])], style={'marginBottom': '30px'})
+    ], style={'marginLeft': '10%', 'marginRight': '10%'})
+], style={
+    'backgroundColor': '#F5F5F5',
+    'minHeight': '100vh',
+})
+
+# Define callback to update heatmaps based on dropdown selections
+@app.callback(
+    [
+        Output('heatmap', 'figure'),
+        Output('heatmap_service_vs_month', 'figure'),
+        Output('heatmap_service_vs_location', 'figure'),
+        Output('heatmap_location_vs_month', 'figure')
+    ],
+    [
+        Input('assignment_group_dropdown', 'value'),
+        Input('category_dropdown', 'value'),
+        Input('service_dropdown', 'value'),
+        Input('issue_dropdown', 'value'),
+        Input('location_dropdown', 'value'),
+        Input('month_dropdown', 'value')
+    ]
+)
+def update_heatmaps(assignment_group, category, service, issue, location, month):
+    # Filter the DataFrame based on selected dropdown values
+    filtered_df = df
+    if assignment_group and 'All' not in assignment_group:
+        filtered_df = filtered_df[filtered_df['Short_Assignment Group'].isin(assignment_group)]
+    if category and 'All' not in category:
+        filtered_df = filtered_df[filtered_df['Short_Category'].isin(category)]
+    if service and 'All' not in service:
+        filtered_df = filtered_df[filtered_df['Short_Service'].isin(service)]
+    if issue and 'All' not in issue:
+        filtered_df = filtered_df[filtered_df['Short_Issue'].isin(issue)]
+    if location and 'All' not in location:
+        filtered_df = filtered_df[filtered_df['Short_Location'].isin(location)]
+    if month:
+        filtered_df = filtered_df[filtered_df['Month'].isin(month)]
+
+    # If no rows match the filter, return empty heatmaps with titles
+    if filtered_df.empty:
+        return (
+            go.Figure(data=[], layout={'title': {'text': 'Service vs Issue Heatmap', 'font': {'size': 20, 'color': '#2E3B4E'}}}),
+            go.Figure(data=[], layout={'title': {'text': 'Service vs Month Heatmap', 'font': {'size': 20, 'color': '#2E3B4E'}}}),
+            go.Figure(data=[], layout={'title': {'text': 'Service vs Location Heatmap', 'font': {'size': 20, 'color': '#2E3B4E'}}}),
+            go.Figure(data=[], layout={'title': {'text': 'Location vs Month Heatmap', 'font': {'size': 20, 'color': '#2E3B4E'}}}),
+        )
+
+    # Create and return the heatmap figures
+    # Service vs Issue Heatmap
+    heatmap_data_issue = filtered_df.groupby(['Short_Service', 'Short_Issue']).size().reset_index(name='Count')
+    heatmap_issue = go.Figure(data=go.Heatmap(
+        x=heatmap_data_issue['Short_Service'],
+        y=heatmap_data_issue['Short_Issue'],
+        z=heatmap_data_issue['Count'],
+        colorscale='YlGnBu',
+        text=heatmap_data_issue['Count'],
+        texttemplate='%{text}',
+        hovertemplate='<b>Service:</b> %{x}<br><b>Issue:</b> %{y}<br><b>Count:</b> %{z}<extra></extra>'
+    ))
+
+    # Service vs Month Heatmap
+    heatmap_data_month = filtered_df.groupby(['Short_Service', 'Month']).size().reset_index(name='Count')
+    heatmap_month = go.Figure(data=go.Heatmap(
+        x=heatmap_data_month['Short_Service'],
+        y=heatmap_data_month['Month'],
+        z=heatmap_data_month['Count'],
+        colorscale='Viridis',
+        text=heatmap_data_month['Count'],
+        texttemplate='%{text}',
+        hovertemplate='<b>Service:</b> %{x}<br><b>Month:</b> %{y}<br><b>Count:</b> %{z}<extra></extra>'
+    ))
+
+    # Service vs Location Heatmap
+    heatmap_data_location = filtered_df.groupby(['Short_Service', 'Short_Location']).size().reset_index(name='Count')
+    heatmap_location = go.Figure(data=go.Heatmap(
+        x=heatmap_data_location['Short_Service'],
+        y=heatmap_data_location['Short_Location'],
+        z=heatmap_data_location['Count'],
+        colorscale='Cividis',
+        text=heatmap_data_location['Count'],
+        texttemplate='%{text}',
+        hovertemplate='<b>Service:</b> %{x}<br><b>Location:</b> %{y}<br><b>Count:</b> %{z}<extra></extra>'
+    ))
+
+    # Location vs Month Heatmap
+    heatmap_data_loc_month = filtered_df.groupby(['Short_Location', 'Month']).size().reset_index(name='Count')
+    heatmap_loc_month = go.Figure(data=go.Heatmap(
+        x=heatmap_data_loc_month['Short_Location'],
+        y=heatmap_data_loc_month['Month'],
+        z=heatmap_data_loc_month['Count'],
+        colorscale='RdYlGn',
+        text=heatmap_data_loc_month['Count'],
+        texttemplate='%{text}',
+        hovertemplate='<b>Location:</b> %{x}<br><b>Month:</b> %{y}<br><b>Count:</b> %{z}<extra></extra>'
+    ))
+
+    return heatmap_issue, heatmap_month, heatmap_location, heatmap_loc_month
+
+
+if __name__ == '__main__':
+    app.run_server(debug=True)
